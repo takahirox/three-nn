@@ -1,0 +1,66 @@
+[
+  {
+    "mode": "reference",
+    "backend": "WebGPU",
+    "physicalPixels": [
+      1024,
+      640
+    ],
+    "azimuth": 0,
+    "shadowMap": {
+      "mapSize": 1024,
+      "filter": "PCFShadowMap",
+      "bias": -0.0002,
+      "normalBias": 0,
+      "cameraExtent": 5,
+      "near": 0.1,
+      "far": 25
+    },
+    "warmup": 30,
+    "samples": 120,
+    "cpuRenderSubmitMedianMs": 0.5,
+    "gpuRenderPassMedianMs": 0.393216,
+    "gpuTiming": "Sum of render-pass timestamp queries (including shadow pass)",
+    "adapter": {
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "",
+      "description": "",
+      "isFallbackAdapter": false
+    },
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+    "note": "CPU render-submit excludes GPU completion and is not evidence of GPU speedup."
+  },
+  {
+    "mode": "neural",
+    "backend": "WebGPU",
+    "physicalPixels": [
+      1024,
+      640
+    ],
+    "azimuth": 0,
+    "shadowMap": {
+      "mapSize": 1024,
+      "filter": "PCFShadowMap",
+      "bias": -0.0002,
+      "normalBias": 0,
+      "cameraExtent": 5,
+      "near": 0.1,
+      "far": 25
+    },
+    "warmup": 30,
+    "samples": 120,
+    "cpuRenderSubmitMedianMs": 0.3000001907348633,
+    "gpuRenderPassMedianMs": 1.31072,
+    "gpuTiming": "Sum of render-pass timestamp queries (including shadow pass)",
+    "adapter": {
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "",
+      "description": "",
+      "isFallbackAdapter": false
+    },
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+    "note": "CPU render-submit excludes GPU completion and is not evidence of GPU speedup."
+  }
+]

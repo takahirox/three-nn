@@ -1,0 +1,11 @@
+{
+  "version": "neural-shadow-v1",
+  "ground": { "x": [-3, 3], "z": [-3, 3], "y": 0, "color": "#bbc8d5" },
+  "sphere": { "center": [-0.9, 0.65, 0.5], "radius": 0.65, "color": "#88bce3" },
+  "box": { "center": [0.95, 0.6, 0.15], "size": [0.9, 1.2, 0.9], "color": "#e3aa80" },
+  "light": { "elevationDegrees": 45, "azimuthDegrees": [-60, 60], "intensity": 2.5, "distance": 10, "ambient": 0.18 },
+  "teacher": { "epsilon": 0.0001 },
+  "shadow": { "mapSize": 1024, "filter": "PCFShadowMap", "bias": -0.0002, "normalBias": 0, "cameraExtent": 5, "near": 0.1, "far": 25 },
+  "camera": { "position": [5, 6, 7], "target": [0, 0, -0.2], "extent": 4.5, "near": 0.1, "far": 40 },
+  "presentation": { "background": "#18212c", "maxPixelRatio": 2 }
+}
