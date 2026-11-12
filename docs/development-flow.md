@@ -43,10 +43,12 @@ prerequisite. These categories do not waive implementation or applicable checks.
 
 ## Implementation and validation
 
-Inspect the current tree before editing. Product scope and the implementation
-stack are undefined at this documentation baseline. No executable application,
-package, test, CI or deployment tooling is established. Do not invent commands or
-results, or add scaffolding or dependencies solely to validate this baseline.
+Inspect the current tree before editing. The neural shading demo uses Vite,
+Three.js WebGPU/TSL and Node's built-in test runner. Use `npm test` for the model
+contract/accuracy checks and `npm run build` for the production build. Browser
+shader or interaction changes also need a WebGPU browser smoke test; a build alone
+does not validate GPU execution. Offline training uses the separate Python setup
+in the README. No CI or deployment tooling is established; do not invent results.
 
 Apply the [UI/UX and layout principles](ui-ux-principles.md) when interfaces are
 introduced. Choose checks using the [test and CI performance principles](testing-ci-principles.md)
