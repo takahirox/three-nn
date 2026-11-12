@@ -6,12 +6,15 @@ import {
 import { abs, color, float, positionWorld, shadow, uniform, vec3, vec4 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import spec from './shadow-scene.json';
-import { neuralVisibility } from './neural-shadow.js';
+import { createNeuralVisibility } from './neural-shadow.js';
+import { models, defaultModel } from './shadow-models.js';
 import './style.css';
 
 const canvas = document.querySelector('#scene');
 const slider = document.querySelector('#azimuth');
 const selector = document.querySelector('#mode');
+const modelSelector = document.querySelector('#model');
+const modelInfo = document.querySelector('#model-info');
 const measure = document.querySelector('#measure');
 const resetView = document.querySelector('#reset-view');
 const status = document.querySelector('#status');
@@ -23,7 +26,7 @@ let controls;
 function showError(error) {
   failed = true;
   canvas.hidden = true;
-  for (const control of [slider, selector, measure, resetView]) control.disabled = true;
+  for (const control of [slider, selector, modelSelector, measure, resetView]) control.disabled = true;
   if (controls) {
     controls.enabled = false;
     controls.dispose();
@@ -95,7 +98,6 @@ async function start() {
   }
 
   const azimuth = uniform(0);
-  const predicted = neuralVisibility(positionWorld, azimuth);
   const mapped = shadow(light).r;
   const base = color(new Color(spec.ground.color));
   const direct = spec.light.intensity * Math.sin(spec.light.elevationDegrees * Math.PI / 180) / Math.PI;
@@ -105,14 +107,28 @@ async function start() {
     result.fragmentNode = fragmentNode;
     return result;
   };
-  const error = abs(mapped.sub(predicted));
-  const materials = {
-    reference: material(floorColor(mapped)),
-    neural: material(floorColor(predicted)),
-    difference: material(vec4(vec3(error, error.mul(error), 0), 1)),
-  };
+  const reference = material(floorColor(mapped));
+  const materials = new Map(models.map((model) => {
+    const predicted = createNeuralVisibility(model)(positionWorld, azimuth);
+    const error = abs(mapped.sub(predicted));
+    return [model.id, {
+      reference,
+      neural: material(floorColor(predicted)),
+      difference: material(vec4(vec3(error, error.mul(error), 0), 1)),
+    }];
+  }));
+  let ready = false;
+  let selectedModel = models.find((model) => model.id === defaultModel);
+  modelSelector.replaceChildren(...models.map((model) => new Option(model.label, model.id)));
+  modelSelector.value = selectedModel.id;
+  function updateModelInfo() {
+    const { id, architecture, parameterCount, validation } = selectedModel;
+    modelInfo.textContent = `${architecture.join(' → ')} · ${parameterCount.toLocaleString('en-US')} parameters · `
+      + `held-out MAE ${validation.aggregate.mae.toFixed(6)} · shadow IoU ${validation.aggregate.iou.toFixed(6)} · ${id}`;
+  }
+  updateModelInfo();
   const ground = new Mesh(new PlaneGeometry(spec.ground.x[1] - spec.ground.x[0],
-    spec.ground.z[1] - spec.ground.z[0]), materials.reference);
+    spec.ground.z[1] - spec.ground.z[0]), reference);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set((spec.ground.x[0] + spec.ground.x[1]) / 2, spec.ground.y,
     (spec.ground.z[0] + spec.ground.z[1]) / 2);
@@ -120,14 +136,14 @@ async function start() {
   scene.add(ground);
 
   function applyMode(mode) {
-    ground.material = materials[mode];
+    ground.material = materials.get(selectedModel.id)[mode];
     renderer.shadowMap.enabled = mode !== 'neural';
     light.castShadow = mode !== 'neural';
     // Also stop any cached ShadowNode updates when switching to Neural.
     light.shadow.autoUpdate = mode !== 'neural';
     light.shadow.needsUpdate = mode !== 'neural';
     document.querySelector('#legend').hidden = mode !== 'difference';
-    measure.disabled = measuring || mode === 'difference' || failed;
+    measure.disabled = !ready || measuring || mode === 'difference' || failed;
   }
   function updateLight() {
     azimuth.value = Number(slider.value) * Math.PI / 180;
@@ -157,7 +173,7 @@ async function start() {
     if (selector.value === 'difference' || measuring || failed) return;
     measuring = true;
     controls.enabled = false;
-    for (const control of [slider, selector, measure, resetView]) control.disabled = true;
+    for (const control of [slider, selector, modelSelector, measure, resetView]) control.disabled = true;
     const view = cameraView();
     timing.textContent = 'Measuring isolated frames…';
     try {
@@ -179,7 +195,9 @@ async function start() {
         }
       }
       const size = renderer.getDrawingBufferSize(new Vector2());
-      const result = { mode: selector.value, backend: 'WebGPU',
+      const result = { mode: selector.value,
+        modelId: selectedModel.id, architecture: selectedModel.architecture,
+        parameterCount: selectedModel.parameterCount, backend: 'WebGPU',
         physicalPixels: [size.x, size.y], azimuth: Number(slider.value),
         ...view,
         shadowMap: s, warmup: 30, samples: 120,
@@ -195,7 +213,7 @@ async function start() {
       renderer.backend.trackTimestamp = false;
       if (!failed) {
         controls.enabled = true;
-        slider.disabled = selector.disabled = resetView.disabled = false;
+        slider.disabled = selector.disabled = modelSelector.disabled = resetView.disabled = false;
         applyMode(selector.value);
         resize();
       }
@@ -203,14 +221,26 @@ async function start() {
   }
   updateLight();
   canvas.hidden = false;
-  // Validate every mode's pipelines and a real submission before reporting ready.
+  // Compile and submit every model/mode before enabling interactions or timing.
+  // Model selection needs no loading; mode changes may rebuild renderer-owned shaders.
+  status.textContent = 'Compiling Reference and all four Neural / Difference models…';
   device.pushErrorScope('validation');
-  for (const mode of ['reference', 'neural', 'difference']) {
-    applyMode(mode);
-    await renderer.compileAsync(scene, camera);
-    resize();
-    await device.queue.onSubmittedWorkDone();
+  const compilationStart = performance.now();
+  const compilation = [];
+  for (const model of models) {
+    selectedModel = model;
+    for (const mode of ['reference', 'neural', 'difference']) {
+      if (mode === 'reference' && model !== models[0]) continue;
+      const start = performance.now();
+      applyMode(mode);
+      await renderer.compileAsync(scene, camera);
+      resize();
+      await device.queue.onSubmittedWorkDone();
+      compilation.push({ modelId: model.id, mode, compileAndFirstSubmitMs: performance.now() - start });
+    }
   }
+  const compilationTotalMs = performance.now() - compilationStart;
+  selectedModel = models.find((model) => model.id === modelSelector.value);
   const validationError = await device.popErrorScope();
   if (validationError) throw validationError;
   if (failed) return;
@@ -239,25 +269,38 @@ async function start() {
     if (failed || measuring) return;
     try { applyMode(selector.value); render(); } catch (error) { showError(error); }
   });
+  modelSelector.addEventListener('change', () => {
+    if (failed || measuring) return;
+    try {
+      selectedModel = models.find((model) => model.id === modelSelector.value);
+      updateModelInfo();
+      applyMode(selector.value);
+      render();
+    } catch (error) { showError(error); }
+  });
   measure.addEventListener('click', () => benchmark().catch(showError));
   new ResizeObserver(resize).observe(canvas);
   controls.enabled = true;
-  slider.disabled = selector.disabled = resetView.disabled = false;
+  slider.disabled = selector.disabled = modelSelector.disabled = resetView.disabled = false;
+  ready = true;
   applyMode(selector.value);
   status.dataset.state = 'ready';
-  status.textContent = 'WebGPU active · all three modes compiled and rendered.';
+  status.textContent = `WebGPU active · Reference and all four Neural / Difference models compiled and rendered (${(compilationTotalMs / 1000).toFixed(2)} s).`;
 
   // Render diagnostics plus the same benchmark used by the UI.
   // Per-render call deltas distinguish the native shadow pass from Neural.
   window.shadowDemo = {
     benchmark,
+    compilation, compilationTotalMs,
     diagnostics() {
       const before = renderer.info.render.calls;
       // Diagnostics must not submit extra frames into an isolated measurement.
       if (!measuring) render();
       return { backend: renderer.backend.isWebGPUBackend ? 'WebGPU' : 'unexpected',
         ...cameraView(), measuring, controlsEnabled: controls.enabled,
-        mode: selector.value, shadowMapEnabled: renderer.shadowMap.enabled,
+        mode: selector.value, modelId: selectedModel.id, azimuth: Number(slider.value),
+        architecture: selectedModel.architecture, parameterCount: selectedModel.parameterCount,
+        shadowMapEnabled: renderer.shadowMap.enabled,
         lightCastShadow: light.castShadow, renderCalls: renderer.info.render.calls - before,
         physicalPixels: [canvas.width, canvas.height], timestampQueries: timestampsSupported,
         adapter: adapterInfo() };

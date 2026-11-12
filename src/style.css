@@ -40,3 +40,10 @@ body:has(#mode) canvas { aspect-ratio: 1.6; }
 body:has(#mode) #scene { touch-action: none; }
 .camera-control { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-bottom: 1rem; }
 #camera-help { flex: 1 1 18rem; margin: 0; color: #bdcbd9; font-size: 0.9rem; }
+
+#model { min-width: 0; max-width: 100%; }
+#model-info, #model-help { font-size: 0.9rem; color: #bdcbd9; }
+@media (max-width: 480px) {
+  .control:has(#model) { flex-wrap: wrap; }
+  #model { width: 100%; }
+}
