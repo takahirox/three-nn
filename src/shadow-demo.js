@@ -4,6 +4,7 @@ import {
   PlaneGeometry, Scene, SphereGeometry, SRGBColorSpace, Vector2, WebGPURenderer,
 } from 'three/webgpu';
 import { abs, color, float, positionWorld, shadow, uniform, vec3, vec4 } from 'three/tsl';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import spec from './shadow-scene.json';
 import { neuralVisibility } from './neural-shadow.js';
 import './style.css';
@@ -12,15 +13,21 @@ const canvas = document.querySelector('#scene');
 const slider = document.querySelector('#azimuth');
 const selector = document.querySelector('#mode');
 const measure = document.querySelector('#measure');
+const resetView = document.querySelector('#reset-view');
 const status = document.querySelector('#status');
 const timing = document.querySelector('#timing');
 let failed = false;
 let measuring = false;
+let controls;
 
 function showError(error) {
   failed = true;
   canvas.hidden = true;
-  for (const control of [slider, selector, measure]) control.disabled = true;
+  for (const control of [slider, selector, measure, resetView]) control.disabled = true;
+  if (controls) {
+    controls.enabled = false;
+    controls.dispose();
+  }
   status.dataset.state = 'error';
   status.textContent = `Unable to run Neural Shadow: ${error.message} `
     + 'Use a current WebGPU browser with graphics acceleration on localhost or HTTPS, '
@@ -56,7 +63,18 @@ async function start() {
   const camera = new OrthographicCamera(-spec.camera.extent, spec.camera.extent,
     spec.camera.extent, -spec.camera.extent, spec.camera.near, spec.camera.far);
   camera.position.fromArray(spec.camera.position);
+  camera.zoom = spec.camera.zoom;
   camera.lookAt(...spec.camera.target);
+  controls = new OrbitControls(camera, canvas);
+  controls.enabled = false;
+  controls.target.fromArray(spec.camera.target);
+  controls.enablePan = false;
+  controls.enableDamping = false;
+  controls.minPolarAngle = 0.1;
+  controls.maxPolarAngle = Math.PI / 2 - 0.05;
+  controls.minZoom = 0.5;
+  controls.maxZoom = 2;
+  controls.update();
   const light = new DirectionalLight(0xffffff, spec.light.intensity);
   const s = spec.shadow;
   light.shadow.mapSize.set(s.mapSize, s.mapSize);
@@ -133,10 +151,14 @@ async function start() {
   }
   const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
   const median = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+  const cameraView = () => ({ cameraPosition: camera.position.toArray(),
+    cameraTarget: controls.target.toArray(), cameraZoom: camera.zoom });
   async function benchmark() {
     if (selector.value === 'difference' || measuring || failed) return;
     measuring = true;
-    for (const control of [slider, selector, measure]) control.disabled = true;
+    controls.enabled = false;
+    for (const control of [slider, selector, measure, resetView]) control.disabled = true;
+    const view = cameraView();
     timing.textContent = 'Measuring isolated frames…';
     try {
       const cpu = [], gpu = [];
@@ -159,6 +181,7 @@ async function start() {
       const size = renderer.getDrawingBufferSize(new Vector2());
       const result = { mode: selector.value, backend: 'WebGPU',
         physicalPixels: [size.x, size.y], azimuth: Number(slider.value),
+        ...view,
         shadowMap: s, warmup: 30, samples: 120,
         cpuRenderSubmitMedianMs: median(cpu),
         gpuRenderPassMedianMs: gpu.length ? median(gpu) : null,
@@ -171,7 +194,8 @@ async function start() {
       measuring = false;
       renderer.backend.trackTimestamp = false;
       if (!failed) {
-        slider.disabled = selector.disabled = false;
+        controls.enabled = true;
+        slider.disabled = selector.disabled = resetView.disabled = false;
         applyMode(selector.value);
         resize();
       }
@@ -192,15 +216,34 @@ async function start() {
   if (failed) return;
   applyMode(selector.value);
   resize();
+  controls.addEventListener('change', () => {
+    if (failed || measuring) return;
+    try { render(); } catch (error) { showError(error); }
+  });
+  resetView.addEventListener('click', () => {
+    if (failed || measuring) return;
+    camera.position.fromArray(spec.camera.position);
+    controls.target.fromArray(spec.camera.target);
+    camera.zoom = spec.camera.zoom;
+    camera.updateProjectionMatrix();
+    // A zoom-only reset may not emit change; render if the listener did not.
+    try {
+      if (!controls.update()) render();
+    } catch (error) { showError(error); }
+  });
   slider.addEventListener('input', () => {
+    if (failed || measuring) return;
     try { updateLight(); render(); } catch (error) { showError(error); }
   });
   selector.addEventListener('change', () => {
+    if (failed || measuring) return;
     try { applyMode(selector.value); render(); } catch (error) { showError(error); }
   });
   measure.addEventListener('click', () => benchmark().catch(showError));
   new ResizeObserver(resize).observe(canvas);
-  slider.disabled = selector.disabled = measure.disabled = false;
+  controls.enabled = true;
+  slider.disabled = selector.disabled = resetView.disabled = false;
+  applyMode(selector.value);
   status.dataset.state = 'ready';
   status.textContent = 'WebGPU active · all three modes compiled and rendered.';
 
@@ -210,8 +253,10 @@ async function start() {
     benchmark,
     diagnostics() {
       const before = renderer.info.render.calls;
-      render();
+      // Diagnostics must not submit extra frames into an isolated measurement.
+      if (!measuring) render();
       return { backend: renderer.backend.isWebGPUBackend ? 'WebGPU' : 'unexpected',
+        ...cameraView(), measuring, controlsEnabled: controls.enabled,
         mode: selector.value, shadowMapEnabled: renderer.shadowMap.enabled,
         lightCastShadow: light.castShadow, renderCalls: renderer.info.render.calls - before,
         physicalPixels: [canvas.width, canvas.height], timestampQueries: timestampsSupported,

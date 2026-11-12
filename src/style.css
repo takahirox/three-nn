@@ -37,3 +37,6 @@ select, button { font: inherit; padding: 0.4rem 0.65rem; }
 select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #bce0ff; outline-offset: 3px; }
 #timing { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; }
 body:has(#mode) canvas { aspect-ratio: 1.6; }
+body:has(#mode) #scene { touch-action: none; }
+.camera-control { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-bottom: 1rem; }
+#camera-help { flex: 1 1 18rem; margin: 0; color: #bdcbd9; font-size: 0.9rem; }
