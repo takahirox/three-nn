@@ -172,6 +172,20 @@ MLP and disables the light's shadow casting, renderer shadow mapping and shadow
 updates. The sphere and box keep identical ordinary Lambert lighting in all modes
 and are not learned receivers. There is no path tracing or scene generalization.
 
+Drag inside the canvas with the left mouse button or one finger to orbit; use the
+mouse wheel, trackpad scroll or two-finger pinch to zoom. OrbitControls allows a
+full horizontal turn around the fixed scene-spec target. Polar angle is bounded
+to **0.1 … π/2 − 0.05 radians** (about 5.7–87.1° from up), keeping the camera
+above the floor; panning is disabled. Orthographic zoom is bounded to **0.5–2×**.
+Touch gestures are captured only on this canvas; the rest of the page scrolls
+normally. Controls respond immediately without damping or an animation loop.
+
+**Reset view** restores the scene-spec initial position **(5,6,7)**, target
+**(0,0,−0.2)** and zoom **1×**, preserving light and mode. Mode changes and resizing
+retain the current pose and zoom. All modes share this live camera, and Difference
+compares visibility at identical camera/light/scene settings. Camera pose is not a
+network input, so orbiting requires no retraining or new weights.
+
 ### Fixed scene and light convention
 
 [`src/shadow-scene.json`](src/shadow-scene.json) is read by both the browser and
@@ -184,7 +198,7 @@ Python. Its version is also recorded in the weights. Geometry and lighting:
 | Axis-aligned box | Center (0.95,0.6,0.15), size (0.9,1.2,0.9); rests on ground |
 | Directional light | White, intensity 2.5, elevation 45°, azimuth θ ∈ [−60°,60°] |
 | Ambient | Common unshadowed linear floor intensity 0.18 |
-| Camera | Orthographic, position (5,6,7), target (0,0,−0.2), horizontal extent ±4.5 |
+| Initial camera | Orthographic, position (5,6,7), target (0,0,−0.2), zoom 1, horizontal extent ±4.5 |
 | Shadow map | 1024², `PCFShadowMap`, bias −0.0002, normalBias 0 |
 | Shadow camera | Orthographic ±5, near 0.1, far 25 |
 
@@ -205,7 +219,7 @@ floorRGB = baseRGB × (0.18 + (2.5 × sin(45°) / π) × visibility)
 ```
 
 Both use `MeshBasicNodeMaterial.fragmentNode`, sRGB output, no tone mapping,
-antialiasing, the same fixed camera and pixel ratio `min(devicePixelRatio,2)`.
+antialiasing, the same live camera and pixel ratio `min(devicePixelRatio,2)`.
 Ambient stays unshadowed. Reference gets visibility from Three.js TSL
 `shadow(light).r`, which renders both `castShadow` occluders through the real
 Three.js shadow-map pass; the floor has `receiveShadow=true`. It is not a CPU or
@@ -286,14 +300,18 @@ fixed scene, ground receiver and azimuth range, not self shadows or new objects.
 ### Compare rendering cost
 
 1. Open the production `/shadow.html` with `npm run preview`. Keep browser, device,
-   window size, device pixel ratio and light angle fixed between modes. Wait for
-   “WebGPU active”. Choose Reference or Neural, then **Measure this mode**.
+   window size, device pixel ratio, light angle, camera pose and zoom fixed between
+   modes. Wait for “WebGPU active”. Choose Reference or Neural, then **Measure this mode**.
 2. Each run uses 30 warm-up and 120 sampled frames, one per animation frame,
-   waiting for submitted GPU work after each. Controls and resize are held during
-   the run. It renders only the selected method, never Difference.
+   waiting for submitted GPU work after each. Light/mode controls, camera input,
+   Reset view and resize are held during warm-up and sampling, then restored if
+   the demo remains healthy. The chosen pose is preserved throughout. It renders
+   only the selected method, never Difference.
 3. The output records mode, physical canvas pixels, light angle, shadow settings,
-   browser, adapter, backend and medians. CPU wall time brackets only synchronous
-   `renderer.render()` submission; GPU completion waits are outside this timer.
+   browser, adapter, backend, `cameraPosition`, `cameraTarget`, `cameraZoom` and
+   medians. Compare results only at matching view parameters; different poses or
+   zooms are distinct measurement conditions. CPU wall time brackets only
+   synchronous `renderer.render()` submission; GPU completion waits are outside this timer.
    When available, Three.js timestamp queries sum GPU render-pass times including
    the reference shadow pass and common scene/output passes. They exclude browser
    compositing and are not end-to-end presented frame latency. GPU time is reported
