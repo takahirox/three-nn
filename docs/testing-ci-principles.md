@@ -6,10 +6,12 @@ or simplifying checks.
 
 ## Current tooling and change-based validation
 
-three-nn currently contains documentation and GitHub templates. No executable
-application, package, build, test, CI or deployment tooling is established. No
-runtime baseline or CI performance budget has been measured. Do not invent
-commands, results, timings or executable workflows for this documentation baseline.
+three-nn contains a Vite/Three.js WebGPU demo, a Node built-in numeric test
+(`npm test`), and an offline PyTorch training script. `npm run build` checks the
+production bundle. Shader compilation and interaction require an actual WebGPU
+browser smoke test; report the backend and environment. No CI or deployment
+tooling, timing baseline or CI performance budget is established. Do not invent
+results, timings or workflows.
 
 Match checks to the actual change and tooling:
 
