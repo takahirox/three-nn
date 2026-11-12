@@ -156,3 +156,152 @@ not prove WebGPU execution. The Issue #3 evidence is in
 Three.js references: [WebGPURenderer guide](https://threejs.org/manual/pages/webgpurenderer),
 [TSL](https://threejs.org/docs/pages/TSL.html),
 [MeshBasicNodeMaterial](https://threejs.org/docs/pages/MeshBasicNodeMaterial.html).
+
+## Neural Shadow (Issue #5)
+
+Open **[`/shadow.html`](shadow.html)** on the same dev server, or follow the
+“Neural Shadow demo” link on the original page. Both entries are included by
+`vite.config.js` in `npm run build` and work with `npm run preview`. The original
+x⁴ shaders, weights and accuracy tests are preserved.
+
+Select **Reference (shadow map)**, **Neural**, or **Difference** without reloading.
+The shared, keyboard-accessible azimuth slider updates the light without
+retraining. Reference uses an actual Three.js directional shadow map. Neural
+replaces only floor visibility with a **4 → 32 → 32 → 1** pretrained TSL fragment
+MLP and disables the light's shadow casting, renderer shadow mapping and shadow
+updates. The sphere and box keep identical ordinary Lambert lighting in all modes
+and are not learned receivers. There is no path tracing or scene generalization.
+
+### Fixed scene and light convention
+
+[`src/shadow-scene.json`](src/shadow-scene.json) is read by both the browser and
+Python. Its version is also recorded in the weights. Geometry and lighting:
+
+| Item | Specification |
+| --- | --- |
+| Ground | Opaque horizontal plane at y=0, x,z each in [−3,3] |
+| Sphere | Center (−0.9,0.65,0.5), radius 0.65; rests on ground |
+| Axis-aligned box | Center (0.95,0.6,0.15), size (0.9,1.2,0.9); rests on ground |
+| Directional light | White, intensity 2.5, elevation 45°, azimuth θ ∈ [−60°,60°] |
+| Ambient | Common unshadowed linear floor intensity 0.18 |
+| Camera | Orthographic, position (5,6,7), target (0,0,−0.2), horizontal extent ±4.5 |
+| Shadow map | 1024², `PCFShadowMap`, bias −0.0002, normalBias 0 |
+| Shadow camera | Orthographic ±5, near 0.1, far 25 |
+
+**L points from the floor toward the light**, with
+`L = (cos(45°) sin(θ), sin(45°), cos(45°) cos(θ))`. At zero azimuth it points
+upward and toward +Z; positive azimuth adds +X. The actual DirectionalLight sits
+at `10 L` and targets the origin. The teacher ray and shader use the same θ and
+fixed elevation. The scene JSON also fixes colors, framing and presentation.
+Changing geometry or light elevation requires a new scene version and retraining.
+
+### Shared lighting and interpreting Difference
+
+[`src/shadow-demo.js`](src/shadow-demo.js) uses a common floor expression in both
+modes, in linear color:
+
+```text
+floorRGB = baseRGB × (0.18 + (2.5 × sin(45°) / π) × visibility)
+```
+
+Both use `MeshBasicNodeMaterial.fragmentNode`, sRGB output, no tone mapping,
+antialiasing, the same fixed camera and pixel ratio `min(devicePixelRatio,2)`.
+Ambient stays unshadowed. Reference gets visibility from Three.js TSL
+`shadow(light).r`, which renders both `castShadow` occluders through the real
+Three.js shadow-map pass; the floor has `receiveShadow=true`. It is not a CPU or
+analytical shadow imitation. Neural uses
+[`neural-shadow.js`](src/neural-shadow.js), importing the committed JSON. JS builds
+the graph once; the shader evaluates it per floor fragment, with no CPU raycasts,
+lookup masks, runtime inference library or runtime training.
+
+Difference evaluates both visibility factors at the **same floor fragment** and
+shows `e = abs(VshadowMap − Vneural)` as linear `(e,e²,0)` before common sRGB
+conversion. Black means zero, orange intermediate error, yellow full disagreement.
+This is the absolute linear floor-color difference divided componentwise by the
+common `baseRGB × directIntensity`; the ambient cancels. Casters retain their
+normal colors. **Difference runs both techniques and cannot be timed.**
+
+The teacher is **ideal hard ray visibility, not captured shadow-map pixels**.
+Neural edges are soft; map filtering, tessellated sphere geometry, finite texels
+and depth bias cause further edge differences. The visualization exposes these
+rather than claiming pixel equality. Unoccluded floor illumination is identical;
+independent quantitative accuracy measures visibility rather than display colors.
+
+### Train and validate Neural Shadow
+
+Use the existing Python environment and pinned `training/requirements.txt` above:
+
+```sh
+.venv/bin/python training/train-shadow.py
+.venv/bin/python training/train-shadow.py --validate-only
+npm test
+# Optional reproduction without replacing the committed model:
+.venv/bin/python training/train-shadow.py --output /tmp/shadow-weights.json
+```
+
+The script uses PyTorch 2.9.1, seed **73**, one CPU thread, deterministic algorithms
+and float32. It creates default seeded Linear layers with ReLU hidden layers and
+sigmoid output. Training uses **65,536 uniform floor/azimuth samples plus 32,768
+shadowed samples** obtained by rejection sampling from the same distribution.
+Exact −40°, 0°, +40° angles are excluded from training. Adam minimizes BCE for
+**10,000 steps**, random batches of **2,048**, learning rate **0.003**. No large
+training dataset is stored. Identical environments regenerate identical exports;
+bitwise reproducibility across platforms or PyTorch versions is not promised.
+
+The CPU teacher offsets origins to `(x,0.0001,z)` and traces positive-distance
+rays toward L. A sphere quadratic with discriminant ≥0 and a positive far root
+counts as a hit (including tangency). The box uses closed AABB slab intersections
+with overlapping intervals and a positive exit; parallel axes must lie inside
+the slab. Either hit gives visibility 0, otherwise 1. Basic contact, outside,
+projected-shadow and direction-sign cases run before training/validation.
+
+[`shadow-weights.json`](src/shadow-weights.json) contains **1,249 learned scalars**,
+architecture, activations, scene version, normalization, target semantics, training
+metadata, held-out metrics and numeric probes. Inputs are world x and z mapped
+linearly from the ground domain to [−1,1], then sin(θ), cos(θ). Each layer stores
+`weights[outputNeuron][inputNeuron]` and `biases[outputNeuron]`; hidden outputs are
+`max(Wx+b,0)`, final output is `sigmoid(Wx+b)` and display visibility is clamped to
+[0,1]. The TSL implementation packs row dot products into vec4 operations and
+materializes each layer's neurons so the expression graph does not expand
+exponentially.
+
+[`tests/shadow-model.test.js`](tests/shadow-model.test.js) independently evaluates
+the export and ray intersections in JS, checks shape/finite values and Python/JS
+probes, and regenerates a fixed held-out set. At each of −40°, 0°, +40°, a 121²
+cell-center grid is divided by ideal visibility; **512 samples per class** are
+selected systematically at indices `floor(k × classCount / 512)`. These locations
+are independent of training. The balanced set measures both classes; it is not an
+area-weighted error over the floor. Shadow classification uses `V < 0.5`.
+
+| Held-out angle | Samples (shadowed / lit) | Visibility MAE | Shadow IoU |
+| --- | --- | --- | --- |
+| −40° | 1,024 (512 / 512) | 0.009873 | 0.990291 |
+| 0° | 1,024 (512 / 512) | 0.013256 | 0.986486 |
+| +40° | 1,024 (512 / 512) | 0.011560 | 0.986486 |
+| Aggregate | 3,072 (1,536 / 1,536) | **0.011563** | **0.987750** |
+
+The automated aggregate IoU gate is **≥0.70**. These results apply only to this
+fixed scene, ground receiver and azimuth range, not self shadows or new objects.
+
+### Compare rendering cost
+
+1. Open the production `/shadow.html` with `npm run preview`. Keep browser, device,
+   window size, device pixel ratio and light angle fixed between modes. Wait for
+   “WebGPU active”. Choose Reference or Neural, then **Measure this mode**.
+2. Each run uses 30 warm-up and 120 sampled frames, one per animation frame,
+   waiting for submitted GPU work after each. Controls and resize are held during
+   the run. It renders only the selected method, never Difference.
+3. The output records mode, physical canvas pixels, light angle, shadow settings,
+   browser, adapter, backend and medians. CPU wall time brackets only synchronous
+   `renderer.render()` submission; GPU completion waits are outside this timer.
+   When available, Three.js timestamp queries sum GPU render-pass times including
+   the reference shadow pass and common scene/output passes. They exclude browser
+   compositing and are not end-to-end presented frame latency. GPU time is reported
+   as **unavailable** when timestamp queries are unsupported; CPU timing alone is
+   exploratory and **cannot establish a GPU speedup**.
+
+Shadow maps scale with caster geometry/count and map resolution; neural work
+scales with floor receiver fragments and network size. Neither technique is
+universally faster. In the recorded Apple Metal test, Neural was slower; no NN
+speedup is claimed. Exact production timings, environment, browser smoke evidence
+and validation revision are in [`docs/validation-issue-5.md`](docs/validation-issue-5.md).
