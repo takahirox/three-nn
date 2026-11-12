@@ -1,0 +1,535 @@
+{
+  "implementationRevision": "f6a7a4f8fdfa2559efc76f48949633c004f3eed7",
+  "environment": {
+    "browser": {
+      "protocolVersion": "1.3",
+      "product": "Chrome/157.0.8103.39",
+      "revision": "@9a31f0acec1854d44e49a73fbf8017598151a583",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "jsVersion": "15.7.112.23"
+    },
+    "platform": "MacIntel",
+    "initial": {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        5.000000000000001,
+        5.999999999999999,
+        7
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": false,
+      "controlsEnabled": true,
+      "mode": "reference",
+      "shadowMapEnabled": true,
+      "lightCastShadow": true,
+      "renderCalls": 3,
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "Actual WebGPU initialization and all-mode compile/render",
+      "status": "Pass",
+      "data": {
+        "backend": "WebGPU",
+        "cameraPosition": [
+          5.000000000000001,
+          5.999999999999999,
+          7
+        ],
+        "cameraTarget": [
+          0,
+          0,
+          -0.2
+        ],
+        "cameraZoom": 1,
+        "measuring": false,
+        "controlsEnabled": true,
+        "mode": "reference",
+        "shadowMapEnabled": true,
+        "lightCastShadow": true,
+        "renderCalls": 3,
+        "physicalPixels": [
+          1024,
+          640
+        ],
+        "timestampQueries": true,
+        "adapter": {
+          "vendor": "apple",
+          "architecture": "metal-3",
+          "device": "",
+          "description": "",
+          "isFallbackAdapter": false
+        }
+      }
+    },
+    {
+      "name": "Native mouse orbit keeps target and light fixed",
+      "status": "Pass",
+      "data": {
+        "initial": [
+          5.000000000000001,
+          5.999999999999999,
+          7
+        ],
+        "orbited": [
+          -9.727347756486816,
+          0.5309095921282524,
+          4.035190742972154
+        ]
+      }
+    },
+    {
+      "name": "Outside-canvas dragging, right drag and Ctrl drag do not pan/orbit",
+      "status": "Pass"
+    },
+    {
+      "name": "Orbit reaches all horizontal quadrants",
+      "status": "Pass",
+      "data": [
+        -2.730954530392747,
+        1.981434449991942,
+        0.4106381231970453,
+        -1.160158203597851
+      ]
+    },
+    {
+      "name": "Polar clamps keep camera above floor",
+      "status": "Pass",
+      "data": [
+        0.10000000000000056,
+        1.5207963267948965
+      ]
+    },
+    {
+      "name": "Wheel and Ctrl+wheel trackpad-style zoom obey 0.5\u20132 bounds",
+      "status": "Pass"
+    },
+    {
+      "name": "Orbit and zoom compile no new shaders",
+      "status": "Pass"
+    },
+    {
+      "name": "All modes/light remain independent",
+      "status": "Pass"
+    },
+    {
+      "name": "Resize retains camera and zoom with matching aspect",
+      "status": "Pass",
+      "data": {
+        "css": [
+          708,
+          442.5
+        ],
+        "physical": [
+          708,
+          442
+        ],
+        "overflow": false
+      }
+    },
+    {
+      "name": "Reset restores scene-spec position/target/zoom and preserves mode/light",
+      "status": "Pass"
+    },
+    {
+      "name": "reference benchmark locks view/UI for all 150 frames; diagnostics submit no frames",
+      "status": "Pass"
+    },
+    {
+      "name": "neural benchmark locks view/UI for all 150 frames; diagnostics submit no frames",
+      "status": "Pass"
+    },
+    {
+      "name": "Camera input and reset work after measurement",
+      "status": "Pass"
+    },
+    {
+      "name": "CDP-emulated one-finger orbit and two-finger pinch (physical touch Not run)",
+      "status": "Pass",
+      "data": {
+        "beforePinch": 1,
+        "afterPinch": 2
+      }
+    },
+    {
+      "name": "No WebGPU validation or uncaught JS errors",
+      "status": "Pass"
+    },
+    {
+      "name": "API benchmark recoverable failure restores controls/reset",
+      "status": "Pass"
+    },
+    {
+      "name": "Device loss disables/disposes camera controls; subsequent input is harmless",
+      "status": "Pass"
+    },
+    {
+      "name": "Original x\u2074 WebGPU demo and light input still work",
+      "status": "Pass"
+    },
+    {
+      "name": "Missing WebGPU leaves all controls disabled and input harmless",
+      "status": "Pass",
+      "data": "Unable to run Neural Shadow: WebGPU is unavailable. Use a current WebGPU browser with graphics acceleration on localhost or HTTPS, then reload. Check browser GPU diagnostics and console if the problem persists."
+    },
+    {
+      "name": "Unavailable adapter leaves all controls disabled and input harmless",
+      "status": "Pass",
+      "data": "Unable to run Neural Shadow: WebGPU adapter/device unavailable (WebGL2 fallback rejected). Use a current WebGPU browser with graphics acceleration on localhost or HTTPS, then reload. Check browser GPU diagnostics and console if the problem persists."
+    },
+    {
+      "name": "Shader initialization failure leaves all controls disabled and input harmless",
+      "status": "Pass",
+      "data": "Unable to run Neural Shadow: Error while parsing WGSL: :1:1 error: unexpected token\ninvalid WGSL\n^^^^^^^\n\n\n - While calling [Device].CreateShaderModule([ShaderModuleDescriptor]).\n Use a current WebGPU browser with graphics acceleration on localhost or HTTPS, then reload. Check browser GPU diagnostics and console if the problem persists."
+    }
+  ],
+  "benchmarks": [
+    {
+      "mode": "reference",
+      "backend": "WebGPU",
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "azimuth": 37,
+      "cameraPosition": [
+        -6.374720776085729,
+        2.6961408952375683,
+        7.858148627319339
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1.0799772127212148,
+      "shadowMap": {
+        "mapSize": 1024,
+        "filter": "PCFShadowMap",
+        "bias": -0.0002,
+        "normalBias": 0,
+        "cameraExtent": 5,
+        "near": 0.1,
+        "far": 25
+      },
+      "warmup": 30,
+      "samples": 120,
+      "cpuRenderSubmitMedianMs": 0.2999999523162842,
+      "gpuRenderPassMedianMs": 0.32767999999999997,
+      "gpuTiming": "Sum of render-pass timestamp queries (including shadow pass)",
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      },
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "note": "CPU render-submit excludes GPU completion and is not evidence of GPU speedup."
+    },
+    {
+      "mode": "neural",
+      "backend": "WebGPU",
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "azimuth": 37,
+      "cameraPosition": [
+        -6.374720776085729,
+        2.6961408952375683,
+        7.858148627319339
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1.0799772127212148,
+      "shadowMap": {
+        "mapSize": 1024,
+        "filter": "PCFShadowMap",
+        "bias": -0.0002,
+        "normalBias": 0,
+        "cameraExtent": 5,
+        "near": 0.1,
+        "far": 25
+      },
+      "warmup": 30,
+      "samples": 120,
+      "cpuRenderSubmitMedianMs": 0.20000004768371582,
+      "gpuRenderPassMedianMs": 0.917504,
+      "gpuTiming": "Sum of render-pass timestamp queries (including shadow pass)",
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      },
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "note": "CPU render-submit excludes GPU completion and is not evidence of GPU speedup."
+    }
+  ],
+  "settledModes": [
+    {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        -1.3180129881376899,
+        7.594842777077439,
+        7.1089811160362855
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": false,
+      "controlsEnabled": true,
+      "mode": "reference",
+      "shadowMapEnabled": true,
+      "lightCastShadow": true,
+      "renderCalls": 3,
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        -1.3180129881376899,
+        7.594842777077439,
+        7.1089811160362855
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": false,
+      "controlsEnabled": true,
+      "mode": "neural",
+      "shadowMapEnabled": false,
+      "lightCastShadow": false,
+      "renderCalls": 2,
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        -1.3180129881376899,
+        7.594842777077439,
+        7.1089811160362855
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": false,
+      "controlsEnabled": true,
+      "mode": "difference",
+      "shadowMapEnabled": true,
+      "lightCastShadow": true,
+      "renderCalls": 3,
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    }
+  ],
+  "narrowLayout": {
+    "overflow": false,
+    "canvas": [
+      343,
+      214.375
+    ],
+    "reset": [
+      16,
+      119
+    ],
+    "view": {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        -1.3180129881376899,
+        7.594842777077439,
+        7.1089811160362855
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": false,
+      "controlsEnabled": true,
+      "mode": "difference",
+      "shadowMapEnabled": true,
+      "lightCastShadow": true,
+      "renderCalls": 3,
+      "physicalPixels": [
+        343,
+        214
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    }
+  },
+  "resizeDuringBenchmark": {
+    "before": {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        -1.3180129881376899,
+        7.594842777077439,
+        7.1089811160362855
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": true,
+      "controlsEnabled": false,
+      "mode": "reference",
+      "shadowMapEnabled": true,
+      "lightCastShadow": true,
+      "renderCalls": 0,
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    "held": {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        -1.3180129881376899,
+        7.594842777077439,
+        7.1089811160362855
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": true,
+      "controlsEnabled": false,
+      "mode": "reference",
+      "shadowMapEnabled": true,
+      "lightCastShadow": true,
+      "renderCalls": 0,
+      "physicalPixels": [
+        1024,
+        640
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    "after": {
+      "backend": "WebGPU",
+      "cameraPosition": [
+        -1.3180129881376899,
+        7.594842777077439,
+        7.1089811160362855
+      ],
+      "cameraTarget": [
+        0,
+        0,
+        -0.2
+      ],
+      "cameraZoom": 1,
+      "measuring": false,
+      "controlsEnabled": true,
+      "mode": "reference",
+      "shadowMapEnabled": true,
+      "lightCastShadow": true,
+      "renderCalls": 3,
+      "physicalPixels": [
+        868,
+        542
+      ],
+      "timestampQueries": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    }
+  },
+  "unexpectedExceptions": [],
+  "limitations": [
+    "Instrumented browser smoke timings are not a performance comparison.",
+    "Physical touch device and physical trackpad were unavailable; CDP touch/wheel emulation is not manual hardware evidence."
+  ]
+}

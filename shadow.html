@@ -11,7 +11,11 @@
       <h1>Neural Shadow</h1>
       <p>A fixed scene: compare real directional shadow maps with a pretrained fragment-shader network.</p>
       <div id="comparison">
-        <canvas id="scene" role="img" aria-label="Floor with a sphere, a box and their cast shadows" hidden></canvas>
+        <canvas id="scene" role="img" aria-label="Floor with a sphere, a box and their cast shadows" aria-describedby="camera-help" hidden></canvas>
+      </div>
+      <div class="camera-control">
+        <p id="camera-help">Drag to orbit · Scroll/pinch to zoom (0.5–2×). One-finger touch orbits; two fingers zoom. Full horizontal turn, polar angle 0.1–1.521 radians from up; stays above the floor. No panning.</p>
+        <button id="reset-view" disabled>Reset view</button>
       </div>
       <div class="control">
         <label for="mode">View</label>

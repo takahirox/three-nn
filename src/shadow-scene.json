@@ -6,6 +6,6 @@
   "light": { "elevationDegrees": 45, "azimuthDegrees": [-60, 60], "intensity": 2.5, "distance": 10, "ambient": 0.18 },
   "teacher": { "epsilon": 0.0001 },
   "shadow": { "mapSize": 1024, "filter": "PCFShadowMap", "bias": -0.0002, "normalBias": 0, "cameraExtent": 5, "near": 0.1, "far": 25 },
-  "camera": { "position": [5, 6, 7], "target": [0, 0, -0.2], "extent": 4.5, "near": 0.1, "far": 40 },
+  "camera": { "position": [5, 6, 7], "target": [0, 0, -0.2], "zoom": 1, "extent": 4.5, "near": 0.1, "far": 40 },
   "presentation": { "background": "#18212c", "maxPixelRatio": 2 }
 }
