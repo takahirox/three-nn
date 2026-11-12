@@ -226,8 +226,10 @@ async function start() {
     controls.target.fromArray(spec.camera.target);
     camera.zoom = spec.camera.zoom;
     camera.updateProjectionMatrix();
-    // update() emits change only if needed; its listener performs the render.
-    controls.update();
+    // A zoom-only reset may not emit change; render if the listener did not.
+    try {
+      if (!controls.update()) render();
+    } catch (error) { showError(error); }
   });
   slider.addEventListener('input', () => {
     if (failed || measuring) return;
