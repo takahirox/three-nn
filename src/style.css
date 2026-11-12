@@ -31,3 +31,9 @@ output { min-width: 3.5rem; text-align: right; font-variant-numeric: tabular-num
   .control { gap: 0.5rem; }
   label { font-size: 0.9rem; }
 }
+
+nav a, a { color: #8fcbff; }
+select, button { font: inherit; padding: 0.4rem 0.65rem; }
+select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #bce0ff; outline-offset: 3px; }
+#timing { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; }
+body:has(#mode) canvas { aspect-ratio: 1.6; }
