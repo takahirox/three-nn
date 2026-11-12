@@ -167,8 +167,8 @@ x⁴ shaders, weights and accuracy tests are preserved.
 Select **Reference (shadow map)**, **Neural**, or **Difference** without reloading.
 The shared, keyboard-accessible azimuth slider updates the light without
 retraining. Reference uses an actual Three.js directional shadow map. Neural
-replaces only floor visibility with a **4 → 32 → 32 → 1** pretrained TSL fragment
-MLP and disables the light's shadow casting, renderer shadow mapping and shadow
+replaces only floor visibility with the selected pretrained TSL fragment
+MLP (default **4 → 32 → 32 → 1**) and disables the light's shadow casting, renderer shadow mapping and shadow
 updates. The sphere and box keep identical ordinary Lambert lighting in all modes
 and are not learned receivers. There is no path tracing or scene generalization.
 
@@ -182,7 +182,8 @@ normally. Controls respond immediately without damping or an animation loop.
 
 **Reset view** restores the scene-spec initial position **(5,6,7)**, target
 **(0,0,−0.2)** and zoom **1×**, preserving light and mode. Mode changes and resizing
-retain the current pose and zoom. All modes share this live camera, and Difference
+retain the current pose and zoom. The **Neural model** selector also preserves
+light, mode, renderer and canvas size; in Reference it leaves the image unchanged. All modes share this live camera, and Difference
 compares visibility at identical camera/light/scene settings. Camera pose is not a
 network input, so orbiting requires no retraining or new weights.
 
@@ -246,21 +247,50 @@ independent quantitative accuracy measures visibility rather than display colors
 Use the existing Python environment and pinned `training/requirements.txt` above:
 
 ```sh
-.venv/bin/python training/train-shadow.py
-.venv/bin/python training/train-shadow.py --validate-only
+# Train missing presets and validate/reuse existing ones, including the baseline.
+# Refreshes the deterministic registry, referencing the original baseline file.
+.venv/bin/python training/train-shadow.py --all
+.venv/bin/python training/train-shadow.py --all --validate-only
 npm test
-# Optional reproduction without replacing the committed model:
+
+# Regenerate any one variant (all four IDs are accepted):
+.venv/bin/python training/train-shadow.py --variant small-shallow
+.venv/bin/python training/train-shadow.py --variant medium-shallow
+.venv/bin/python training/train-shadow.py --variant small-deep
+# Optional baseline reproduction without replacing the committed artifact:
 .venv/bin/python training/train-shadow.py --output /tmp/shadow-weights.json
+
+# Explicitly regenerate every variant, then refresh artifact hashes:
+for variant in small-shallow medium-shallow small-deep baseline-deep; do
+  .venv/bin/python training/train-shadow.py --variant "$variant"
+done
+.venv/bin/python training/train-shadow.py --all
 ```
 
-The script uses PyTorch 2.9.1, seed **73**, one CPU thread, deterministic algorithms
-and float32. It creates default seeded Linear layers with ReLU hidden layers and
-sigmoid output. Training uses **65,536 uniform floor/azimuth samples plus 32,768
-shadowed samples** obtained by rejection sampling from the same distribution.
-Exact −40°, 0°, +40° angles are excluded from training. Adam minimizes BCE for
-**10,000 steps**, random batches of **2,048**, learning rate **0.003**. No large
-training dataset is stored. Identical environments regenerate identical exports;
-bitwise reproducibility across platforms or PyTorch versions is not promised.
+Without options, the original baseline training/export command remains compatible;
+`--validate-only` validates the baseline. `--output` redirects a single variant's
+export/validation. After replacing artifacts, `--all` refreshes the registry.
+
+All presets use PyTorch 2.9.1, seed **73**, one CPU thread, deterministic algorithms
+and float32. To preserve the valid baseline's data exactly, the script first
+initializes the seeded baseline Linear layers, then generates **65,536 uniform
+floor/azimuth samples plus 32,768 shadowed samples** by rejection sampling. It
+uses these same 98,304 examples and labels for every shape, regardless of model
+initialization. Each alternative initializes its own default Linear layers with
+seed 73, without consuming the shared data/minibatch RNG. Each training run
+starts minibatch sampling from the same post-data-generation RNG state. The
+registry records SHA-256 of the raw contiguous training float32 and held-out
+float64 point tensors (little-endian in the validated environment). No training
+dataset or framework checkpoint is committed.
+
+Exact −40°, 0°, +40° angles are excluded from training. ReLU activates **every**
+hidden layer; only the final layer uses sigmoid. Adam minimizes BCE for
+**10,000 steps** with random batches of **2,048**, learning rate **0.003** and
+other optimizer defaults. This is a fixed budget, with no early stopping or
+held-out model selection. Equal steps do not establish equal convergence or
+optimization quality. Bitwise reproducibility across platforms or PyTorch
+versions is not promised; rerun numeric validation after regeneration. The
+unchanged baseline was reproduced byte-for-byte in the validated environment.
 
 The CPU teacher offsets origins to `(x,0.0001,z)` and traces positive-distance
 rays toward L. A sphere quadratic with discriminant ≥0 and a positive far root
@@ -269,45 +299,71 @@ with overlapping intervals and a positive exit; parallel axes must lie inside
 the slab. Either hit gives visibility 0, otherwise 1. Basic contact, outside,
 projected-shadow and direction-sign cases run before training/validation.
 
-[`shadow-weights.json`](src/shadow-weights.json) contains **1,249 learned scalars**,
-architecture, activations, scene version, normalization, target semantics, training
-metadata, held-out metrics and numeric probes. Inputs are world x and z mapped
-linearly from the ground domain to [−1,1], then sin(θ), cos(θ). Each layer stores
-`weights[outputNeuron][inputNeuron]` and `biases[outputNeuron]`; hidden outputs are
-`max(Wx+b,0)`, final output is `sigmoid(Wx+b)` and display visibility is clamped to
-[0,1]. The TSL implementation packs row dot products into vec4 operations and
-materializes each layer's neurons so the expression graph does not expand
-exponentially.
+[`src/shadow-models/manifest.json`](src/shadow-models/manifest.json) fixes model
+IDs, friendly architecture labels, exact artifact paths/hashes, tensor dimensions,
+parameter counts (weights **and biases**), default ID, scene version and shared
+data provenance. Each model JSON contains architecture, activations, scene version,
+normalization/input order, target semantics, all learned tensors, training budget,
+held-out metrics and float32 probes. The baseline reuses
+[`shadow-weights.json`](src/shadow-weights.json) without duplication or modification.
 
-[`tests/shadow-model.test.js`](tests/shadow-model.test.js) independently evaluates
-the export and ray intersections in JS, checks shape/finite values and Python/JS
-probes, and regenerates a fixed held-out set. At each of −40°, 0°, +40°, a 121²
-cell-center grid is divided by ideal visibility; **512 samples per class** are
-selected systematically at indices `floor(k × classCount / 512)`. These locations
-are independent of training. The balanced set measures both classes; it is not an
-area-weighted error over the floor. Shadow classification uses `V < 0.5`.
+Inputs are world x and z mapped linearly from the ground domain to [−1,1], then
+sin(θ), cos(θ). Each layer stores `weights[outputNeuron][inputNeuron]` and
+`biases[outputNeuron]`; hidden outputs are `max(Wx+b,0)`, the last output is
+`sigmoid(Wx+b)` and display visibility is clamped to [0,1]. The TSL graph uses the
+selected layer count to place activations, packs row dot products into vec4
+operations and materializes neurons to avoid exponential graph expansion. All
+artifacts are bundled, and Reference plus every Neural/Difference pipeline is
+compiled and submitted before controls become available. Initialization reports
+progress/errors and total compilation time. Selecting a model needs no reload,
+fetch or training. Three.js can rebuild shared shaders when mode flags change;
+the benchmark warms the selected state before collecting samples. The compact
+summary reports the selected ID, architecture, count and common held-out
+aggregate MAE/IoU.
 
-| Held-out angle | Samples (shadowed / lit) | Visibility MAE | Shadow IoU |
-| --- | --- | --- | --- |
-| −40° | 1,024 (512 / 512) | 0.009873 | 0.990291 |
-| 0° | 1,024 (512 / 512) | 0.013256 | 0.986486 |
-| +40° | 1,024 (512 / 512) | 0.011560 | 0.986486 |
-| Aggregate | 3,072 (1,536 / 1,536) | **0.011563** | **0.987750** |
+[`tests/shadow-model.test.js`](tests/shadow-model.test.js) checks every required
+shape, finite parameters, hash, tensor layout and independent Python/JS probes.
+It independently regenerates the ray labels and fixed held-out set for **all four**
+models. At each of −40°, 0°, +40°, a 121² cell-center grid is divided by ideal
+visibility; **512 samples per class** are selected systematically at indices
+`floor(k × classCount / 512)`. Each angle has **1,024 samples (512 shadowed / 512
+lit)**; the aggregate has **3,072 (1,536 / 1,536)**. These points are independent
+of training. This balanced metric is not an area-weighted floor error. Shadow
+classification uses `V < 0.5`. Recomputed counts must match exactly; Python
+float32 versus JS float64 tolerances are **2e-5 MAE**, **1e-6 IoU** and **2e-5
+probe visibility**. Only the existing baseline retains its aggregate IoU ≥0.70
+gate; smaller variants may legitimately lose quality.
 
-The automated aggregate IoU gate is **≥0.70**. These results apply only to this
-fixed scene, ground receiver and azimuth range, not self shadows or new objects.
+| Model ID | Architecture | Parameters | −40° MAE / IoU | 0° MAE / IoU | +40° MAE / IoU | Aggregate MAE / IoU |
+| --- | --- | ---: | --- | --- | --- | --- |
+| `small-shallow` | 4 → 16 → 1 | 97 | 0.046241 / 0.960227 | 0.082998 / 0.920000 | 0.074787 / 0.926335 | 0.068009 / 0.935225 |
+| `medium-shallow` | 4 → 32 → 1 | 193 | 0.044710 / 0.963947 | 0.083992 / 0.925319 | 0.064305 / 0.942699 | 0.064336 / 0.943723 |
+| `small-deep` | 4 → 16 → 16 → 1 | 369 | 0.016379 / 0.982659 | 0.022148 / 0.971264 | 0.018805 / 0.984496 | 0.019111 / 0.979448 |
+| `baseline-deep` | 4 → 32 → 32 → 1 | 1,249 | 0.009873 / 0.990291 | 0.013256 / 0.986486 | 0.011560 / 0.986486 | 0.011563 / 0.987750 |
+
+These single-seed, fixed-budget observations show better aggregate accuracy for
+the deeper presets here. Compare width at fixed depth and depth at fixed width;
+parameter count also changes, so this is not causal evidence about depth alone,
+nor a claim that larger networks are universally more accurate or faster. Compare
+visible sphere and box shadow edges at the same light/view in Neural, then
+Difference; filtered reference edges differ from the ideal-ray targets. All
+results apply only to this fixed scene, floor and light range.
 
 ### Compare rendering cost
 
 1. Open the production `/shadow.html` with `npm run preview`. Keep browser, device,
    window size, device pixel ratio, light angle, camera pose and zoom fixed between
-   modes. Wait for “WebGPU active”. Choose Reference or Neural, then **Measure this mode**.
+   models and modes. Wait for “WebGPU active”. Choose Reference or Neural and the
+   **Neural model**, then **Measure this mode**. Repeat for Reference and each of
+   the four models without moving the camera, light or window. Run each at least
+   twice and retain both results; a single median does not establish stability.
 2. Each run uses 30 warm-up and 120 sampled frames, one per animation frame,
    waiting for submitted GPU work after each. Light/mode controls, camera input,
-   Reset view and resize are held during warm-up and sampling, then restored if
-   the demo remains healthy. The chosen pose is preserved throughout. It renders
+   model selection, Reset view and resize are held during warm-up and sampling,
+   then restored if the demo remains healthy. The chosen pose is preserved throughout. It renders
    only the selected method, never Difference.
-3. The output records mode, physical canvas pixels, light angle, shadow settings,
+3. The output records mode, model ID, architecture, parameter count, physical
+   canvas pixels, light angle, shadow settings,
    browser, adapter, backend, `cameraPosition`, `cameraTarget`, `cameraZoom` and
    medians. Compare results only at matching view parameters; different poses or
    zooms are distinct measurement conditions. CPU wall time brackets only
@@ -318,8 +374,15 @@ fixed scene, ground receiver and azimuth range, not self shadows or new objects.
    as **unavailable** when timestamp queries are unsupported; CPU timing alone is
    exploratory and **cannot establish a GPU speedup**.
 
+Initial compilation observations are available through `shadowDemo.compilation`
+and `shadowDemo.compilationTotalMs`; they include compile plus first submission,
+not isolated compiler time. Compilation is completed before any timed run.
+
 Shadow maps scale with caster geometry/count and map resolution; neural work
 scales with floor receiver fragments and network size. Neither technique is
 universally faster. In the recorded Apple Metal test, Neural was slower; no NN
 speedup is claimed. Exact production timings, environment, browser smoke evidence
-and validation revision are in [`docs/validation-issue-5.md`](docs/validation-issue-5.md).
+and validation revision for the original baseline are in
+[`docs/validation-issue-5.md`](docs/validation-issue-5.md). Current four-model
+observations, limitations and acceptance evidence are in
+[`docs/validation-issue-9.md`](docs/validation-issue-9.md).
