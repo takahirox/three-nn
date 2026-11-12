@@ -7,6 +7,10 @@ commit changes only this report and its JSON record; runtime files are unchanged
 The final checkpoint SHA is supplied in the GitWeave Result. No PR was created
 or updated by this node; this report supplies evidence for the downstream PR.
 
+The original AC4 evidence below missed a zoom-only reset defect subsequently
+found in review. The [reset correction](#ac4-zoom-only-reset-correction) records
+the fix and focused validation; the other evidence retains its original scope.
+
 ## Mandatory pre-merge acceptance
 
 | Criterion | Actual implementation and evidence | Result |
@@ -94,6 +98,33 @@ marking the device failed. Each hook is isolated from normal rendering assertion
 - **Skipped (optional):** screen recording and additional browsers/devices.
 - No implementation defect remains identified. Retain the device-validation
   limitations when preparing downstream PR evidence; do not convert them to Pass.
+
+## AC4 zoom-only reset correction
+
+Validated on November 12, 2026, against the fix commit containing this section
+(final SHA supplied in the GitWeave Result). Validated runtime blob:
+`src/shadow-demo.js` **`e7b0043e97dfa70716e164a8bd9b2fb082875d1e`**.
+
+- **Fail (before fix):** reproduced on parent `4940ff41c2e42bc35bb4e3554c8596275812007a`.
+  Wheel zoom to 1.2277376631548256, then Reset view, returned zoom to 1 but
+  submitted no GPU work; the canvas screenshot remained identical to the zoomed
+  image. `OrbitControls.update()` returned false.
+- **Pass (after fix):** Reset renders explicitly when `update()` returns false.
+  Native CDP wheel and reset-button clicks in Reference, Neural and Difference
+  each restored the scene-spec position/target/zoom while retaining light 37°
+  and the selected mode. Each reset made exactly one top-level renderer call
+  (3/2/3 GPU submissions respectively, including internal shadow work). Canvas
+  screenshot hashes matched each mode's settled initial view exactly.
+- **Pass:** an orbit followed by reset used the existing change listener and
+  rendered once; repeating reset at the initial view also rendered once.
+- Method: isolated headless Chrome **157.0.8103.52**, macOS **27.2 ARM64**,
+  actual Apple **metal-3** WebGPU, `isFallbackAdapter=false`, Vite dev server on
+  localhost. Session-local Node/CDP instrumentation counted top-level renderer
+  calls and GPU submissions and read controls directly. No `diagnostics()` calls
+  were made. No uncaught exceptions or GPU validation errors were observed.
+- **Pass:** `npm ci`, `npm test` (5 tests), `npm run build`, `git diff --check`.
+  The existing >500 kB bundle warning remains. These focused checks supplement
+  the earlier evidence; physical touch/trackpad remain **Not run** as above.
 
 ## Required post-merge verification
 
