@@ -11,8 +11,11 @@ Describe what changed and why each change is needed for the outcome.
 
 ## Related Issues and remaining scope
 
-Use `Closes #<number>` for complete resolution or `Related to #<number>` for partial
-work, following the review guide. List remaining implementation and validation by
+Use `Closes #<number>` when implementation and mandatory pre-merge acceptance are
+complete, including when post-merge-only verification is pending, or
+`Related to #<number>` for partial work, following the
+[review guide](https://github.com/takahirox/three-nn/blob/main/docs/review-guidelines.md#readiness-and-merge).
+List remaining implementation and pre-merge validation by
 criterion, or state "None." For an authorized partial integration, identify its
 declared scope and existing maintainer/workflow authorization, retain unmet
 criteria and leave the source Issue open.
@@ -44,7 +47,12 @@ Report additional checks with the same statuses and evidence, or state
 
 List only checks the actual Issue explicitly requires that are possible only after
 merge, why they require merge and the expected evidence, or state "None required."
-Keep these **Pending** until performed, then record actual results and follow-up.
+Follow the [post-merge lifecycle](https://github.com/takahirox/three-nn/blob/main/docs/review-guidelines.md#post-merge-verification):
+merge and close the implemented Issue, then record evidence in this merged PR,
+the closed Issue or a linked validation report. Until performed, report **Not run**
+with the pending state or environment blocker, reason and resume condition. Link
+new or existing equivalent Issues for actual defects; closure does not claim pending
+checks passed.
 
 ## Contributor guidance
 

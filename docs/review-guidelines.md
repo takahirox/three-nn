@@ -30,7 +30,8 @@ Markdown structure, local links/anchors, consistency and whitespace across the
 complete diff, including added files.
 
 Verify actual Pass, Fail, Skipped and Not run results with reasons for gaps.
-Pending CI is not a pass; skipped or missing mandatory checks remain unmet.
+Pending CI is not a pass; skipped or missing mandatory pre-merge checks remain
+blockers.
 Keep optional validation outside completion criteria. Ordinary implementation
 choices and optional manual follow-up do not create new human-approval gates.
 Require external evidence or decisions only when the actual Issue needs them,
@@ -59,7 +60,12 @@ condition is met.
 
 Full Issue resolution requires all implementation and mandatory pre-merge criteria
 to be met, with no unresolved blocking findings. Use a closing reference such as
-`Closes #1` only for complete resolution.
+`Closes #1` for that complete resolution, even when required post-merge-only checks
+are pending. Preserve the normal closing reference added by ProjectWeave
+publication. Review must not request its removal, keep the source Issue open or
+withhold approval solely because those checks are pending; doing so causes the
+Review → Fix → Publish → Review loop described in the
+[development flow](development-flow.md#merge-and-follow-up).
 
 An explicitly authorized partial integration may proceed under existing
 maintainer/workflow authorization when its declared scope is complete and its
@@ -67,6 +73,9 @@ applicable mandatory checks pass. Still assess every Issue criterion, identify
 remaining implementation and validation, retain unmet requirements, use a
 non-closing reference such as `Related to #1`, and leave the source Issue open.
 Authorized partial integration does not establish full Issue completion.
+Pending post-merge-only verification does not make an otherwise complete
+implementation partial. Missing implementation, mandatory pre-merge tests and
+genuinely necessary pre-merge human acceptance remain blockers to full resolution.
 
 Merge the reviewed current head once applicable required checks pass and readiness
 for the authorized scope holds, following existing repository/workflow merge
@@ -76,12 +85,25 @@ changes, reassess affected review and validation before merging.
 
 ## Post-merge verification
 
-Post-merge-only checks are completion requirements only when the actual Issue
-explicitly requires them. Keep them pending until performed, then record actual
-results and follow-up. Optional later checks stay outside completion criteria.
-A merge-triggered deployment cannot be a pre-merge prerequisite, and pre-merge
-results do not prove publication or deployment success. Required post-merge-only
-checks do not make an otherwise complete implementation partial, but full Issue
-completion must retain those pending requirements. They do not waive pre-merge
-checks or implementation. State "None required" when appropriate; this
-documentation/template baseline requires none.
+After successful merge, close the fully implemented original Issue, then perform
+only the post-merge checks the actual Issue genuinely requires. Record each method,
+affected revision, actual result and limitations in the merged PR, closed Issue or
+a linked validation report, using the
+[validation statuses](development-flow.md#implementation-and-validation).
+Keep unperformed, pending or environment-blocked checks explicitly **Not run** with
+their reason and resume condition. Issue closure does not claim those checks passed,
+and an unavailable test environment alone is not evidence of a product defect.
+
+When verification finds an actual defect, first check for an existing equivalent
+Issue and use it if present; otherwise create a new Issue. Include reproduction
+steps, affected revision, expected and actual behavior, and links to the original
+Issue and merged PR. Do not keep or reopen the original Issue solely for this
+post-merge follow-up.
+
+Optional later checks stay outside completion criteria. A merge-triggered
+deployment cannot be a pre-merge prerequisite, and pre-merge results do not prove
+publication or deployment success. This lifecycle supersedes older instructions to
+keep an implemented Issue open solely for post-merge verification, without rewriting
+historical test outcomes or evidence. It does not waive implementation, mandatory
+pre-merge acceptance or required protections. State "None required" when appropriate;
+this documentation/template change requires none.

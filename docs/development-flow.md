@@ -1,7 +1,8 @@
 # Development flow
 
 Work in three-nn follows **Issue → implementation → PR → review → revision as
-needed → merge**. Add post-merge work only when the actual Issue requires it.
+needed → merge and close the original Issue → required post-merge verification**.
+Add post-merge work only when the actual Issue requires it.
 Target `main` unless the Issue or authorized workflow specifies another branch.
 
 ## Collaboration language
@@ -32,14 +33,17 @@ Keep three categories distinct:
   verifiable before merge.
 - **Optional validation:** useful extra checks outside completion criteria.
 - **Required post-merge verification:** genuinely required checks possible only
-  after merge. Include them as completion requirements only when the actual Issue
-  explicitly requires them; otherwise state "None required."
+  after merge. Require them only when the actual Issue explicitly needs them;
+  otherwise state "None required." Track them separately from pre-merge acceptance
+  and Issue closure.
 
 Use ordinary implementation judgment within authorized scope. Do not create new
 human-approval gates for routine choices or optional manual follow-up. Require
 external evidence or decisions only when necessary for the actual Issue, stating
 why and the expected evidence. A merge-triggered deployment cannot be a pre-merge
 prerequisite. These categories do not waive implementation or applicable checks.
+Documentation-only work does not require routine manual approval, physical-device
+testing, heavyweight model downloads or deployment gates.
 
 ## Implementation and validation
 
@@ -69,7 +73,8 @@ Record each command or method, relevant revision, actual outcome and limitations
 - **Not run:** unperformed or unavailable; state why and the resume condition.
 
 Pending CI is **Not run**, with its pending state and run reference identified;
-it is not a pass. A skipped or unperformed mandatory check remains unmet.
+it is not a pass. A skipped or unperformed mandatory pre-merge check remains unmet
+and blocks merge.
 
 ## PR, review and revision
 
@@ -91,7 +96,17 @@ existing repository/workflow authorization and required protections as defined i
 the review guide. These documents do not grant merge permission or add a blanket
 human-approval requirement.
 
-Keep genuinely required post-merge-only checks pending until performed, then record
-actual results and follow-up. Pre-merge success does not prove deployment or
-publication success. This documentation/template baseline requires no post-merge
-verification.
+For a fully implemented Issue with applicable mandatory pre-merge acceptance met,
+preserve `Closes #N`, merge and close the original Issue, then perform genuinely
+required post-merge checks. Pending post-merge-only verification does not make the
+implementation partial or justify removing the closing reference or withholding
+review approval. That would make publication and review undo each other in a
+repeated Review → Fix → Publish → Review loop.
+
+Follow the [post-merge verification guidance](review-guidelines.md#post-merge-verification)
+to record accurate evidence and track discovered defects in new linked Issues.
+Keep unperformed checks pending; closure does not claim they passed. Pre-merge
+success does not prove deployment or publication success. This lifecycle supersedes
+older instructions to keep an implemented Issue open solely for post-merge
+verification; preserve historical test outcomes and evidence without rewriting
+them. This documentation/template change requires no post-merge verification.
