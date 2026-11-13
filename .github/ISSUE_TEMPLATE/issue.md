@@ -20,8 +20,10 @@ Identify scope boundaries and known remaining work outside this Issue.
 ## Context and reproduction
 
 Include examples, logs, related Issues and relevant owner decisions. For a bug,
-give reproduction steps, expected results and actual results. Otherwise explain
-why reproduction does not apply.
+give reproduction steps, affected revision, expected results and actual results.
+For a post-merge defect, check for an equivalent Issue first and link the original
+Issue and merged PR, following the review guide. Otherwise explain why reproduction
+does not apply.
 
 ## Mandatory pre-merge acceptance
 
@@ -47,7 +49,11 @@ List useful additional checks outside completion criteria, or state "None requir
 
 List only checks this Issue genuinely requires that are possible only after merge.
 Explain why they require merge and what evidence is needed, or state "None required."
-Keep required checks pending until performed.
+Track these separately from Issue closure under the
+[post-merge lifecycle](https://github.com/takahirox/three-nn/blob/main/docs/review-guidelines.md#post-merge-verification):
+close the implemented Issue after merge, then record actual results and linked
+defect Issues. Until performed, report **Not run** with the pending state or
+environment blocker, reason and resume condition.
 
 ## Contributor guidance
 
